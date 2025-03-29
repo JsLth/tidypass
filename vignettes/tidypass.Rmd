@@ -1,0 +1,134 @@
+---
+title: "Replicating Postpass examples"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Replicating Postpass exampls}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tidypass)
+```
+
+```{r}
+bbox <- st_as_sfc(st_bbox(c(
+  xmin = 8.34,
+  xmax = 8.46,
+  ymin = 48.97,
+  ymax = 49.03
+)))
+
+pp_tbl("point") |>
+  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags) |>
+  collect()
+```
+
+
+```{r}
+point_sql <- pp_tbl("point") |>
+  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags)
+
+poly_sql <- pp_tbl("polygon") |>
+  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags)
+
+union(point_sql, poly_sql) |>
+  collect()
+```
+
+
+```{r}
+pp_tbl("point") |>
+  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+  group_by(amenity) |>
+  summarise(count = n(), amenity = amenity) |>
+  collect(geojson = FALSE)
+```
+
+
+
+```{r}
+pp_tbl("line") |>
+  filter(route == "tram" & ref == "3" & way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags) |>
+  collect()
+```
+
+
+```{r}
+point_sql <- pp_tbl("point") |>
+  filter(
+    tags %?% 'addr:street' &
+    !tags %?% 'addr:postcode' &
+    way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags)
+
+poly_sql <- pp_tbl("polygon") |>
+  filter(
+    tags %?% 'addr:street' &
+    !tags %?% 'addr:postcode' &
+    way %&&% !!pg_bbox(bbox)) |>
+  select(name, way, tags)
+
+union(point_sql, poly_sql) |>
+  collect()
+```
+
+```{r}
+pp_tbl("point") |>
+  filter(ref == "15398") |>
+  select(osm_id, way) |>
+  collect()
+
+pp_tbl("polygon") |>
+  filter(name == "München" & boundary == "administrative") |>
+  select(osm_id, way) |>
+  collect()
+```
+
+
+```{r}
+bbox <- st_as_sfc(st_bbox(c(
+  xmin = 5.53,
+  xmax = 47.23,
+  ymin = 15.38,
+  ymax = 54.96
+)))
+
+points <- pp_tbl("point")
+polys <- pp_tbl("polygon")
+
+points |>
+  cross_join(polys) |>
+  filter(
+    way.y %&&% !!pg_bbox(bbox) &
+    st_contains(way.y, way.x) &
+    tags.x %->% 'addr:postcode' %<>% tags.y %->% 'postal_code'
+  ) |>
+  mutate(
+    punkt_plz = tags.x %->% 'addr:postcode',
+    poly_plz = tags.y %->% 'postal_code'
+  ) |>
+  select(
+    osm_id = osm_id.x,
+    way = way.x,
+    punkt_plz,
+    poly_plz
+  )
+```
+
+
+```{r}
+
+```
+

@@ -1,13 +1,23 @@
 Package: tidypass
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Query 'OpenStreetMap' using 'dplyr'
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Authors@R: 
+    person("Jonas", "Lieth", , "jonas.lieth@gesis.org", role = c("aut", "cre"))
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 2.10)
+    R (>= 4.10)
+Imports: 
+    dbplyr,
+    dplyr,
+    httr2
+Suggests: 
+    knitr,
+    parsermd,
+    rmarkdown
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
