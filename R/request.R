@@ -16,6 +16,21 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #' @param name If \code{schema} is provided, specifies the name of the Postpass
 #' table from which to query.
 #'
+#' @details
+#' Note that all columns can be treated as either numeric or character vectors
+#' with two exceptions:
+#'
+#' \itemize{
+#'  \item{\code{tags} is an
+#'  \href{https://www.postgresql.org/docs/current/hstore.html}{\code{hstore}}
+#'  which is something like a named list in Postgres. You can interact with it
+#'  using \link[hstore]{hstore helpers}}.
+#'  \item{\code{way} is a
+#'  \href{https://postgis.net/docs/}{PostGIS} geometry. You can interact with
+#'  it using \link[postgis]{PostGIS helpers}.}
+#' }
+#'
+#'
 #' @returns A lazy tibble of class \code{pp_tbl}.
 #' @export
 #'

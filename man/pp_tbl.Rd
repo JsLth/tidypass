@@ -27,6 +27,20 @@ database schema. This tibble can be manipulated using \code{dplyr} functions.
 Each operation extends the SQL query which is then sent to the Postpass
 server by running \code{\link{collect}}. An object
 }
+\details{
+Note that all columns can be treated as either numeric or character vectors
+with two exceptions:
+
+\itemize{
+ \item{\code{tags} is an
+ \href{https://www.postgresql.org/docs/current/hstore.html}{\code{hstore}}
+ which is something like a named list in Postgres. You can interact with it
+ using \link[hstore]{hstore helpers}}.
+ \item{\code{way} is a
+ \href{https://postgis.net/docs/}{PostGIS} geometry. You can interact with
+ it using \link[postgis]{PostGIS helpers}.}
+}
+}
 \examples{
 pp_tbl("point")
 pp_tbl("roads")
