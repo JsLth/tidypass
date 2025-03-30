@@ -47,10 +47,16 @@ pp_last_import <- function() {
 #' @rdname postpass_utils
 #' @export
 pp_tables <- function() {
-  postpass(
-    "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public'",
+  setdiff(postpass(
+    "SELECT
+      *
+    FROM
+      pg_catalog.pg_tables
+    WHERE
+      schemaname = 'public'
+      AND tableowner = 'osm'",
     geojson = FALSE
-  )$tablename
+  )$tablename, "osm2pgsql_properties")
 }
 
 

@@ -5,14 +5,15 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #' Creates a lazy tibble based on a simulated Postgres database and a Postpass
 #' database schema. This tibble can be manipulated using \code{dplyr} functions.
 #' Each operation extends the SQL query which is then sent to the Postpass
-#' server by running \code{\link{collect}}. An object
+#' server by running \code{\link{collect}}.
 #'
 #' @param table A table name (or at least its suffix). You can retrieve a list
-#' of available table names by running \code{\link{list_tables}} or by taking
-#' a look at \href{https://github.com/woodpeck/postpass-ops/blob/main/SCHEMA.md}{SCHEMA.md}.
+#' of available table names by running \code{\link{list_tables}} or
+#' \code{\link{pp_tables}}.
 #' @param schema Optionally, a schema dataframe. A schema should contain only
 #' columns accessible in the remote PostGIS database along with their prototype
-#' classes. If \code{NULL}, infers a schema from \code{table}.
+#' classes. Schemas can be retrieved from \code{\link{pp_schema}}. If
+#' \code{NULL}, infers a schema from \code{table}.
 #' @param name If \code{schema} is provided, specifies the name of the Postpass
 #' table from which to query.
 #'
@@ -30,7 +31,6 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #'  it using \link[postgis]{PostGIS helpers}.}
 #' }
 #'
-#'
 #' @returns A lazy tibble of class \code{pp_tbl}.
 #' @export
 #'
@@ -40,7 +40,7 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #'
 #' # provide a custom schema
 #' pp_tbl(schema = dplyr::tibble(amenity = character(1), way = list(NULL)))
-pp_tbl <- function(table = list_tables(), schema = NULL, name = NULL) {
+pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
   if (is.null(schema)) {
     rlang::arg_match(table)
     table <- sprintf("planet_osm_%s", table)
@@ -49,6 +49,7 @@ pp_tbl <- function(table = list_tables(), schema = NULL, name = NULL) {
     table <- NULL
   }
 
+  schema <- schema_to_tbl(schema)
   tbl <- dbplyr::tbl_lazy(
     schema,
     con = dbplyr::simulate_postgres(),

@@ -4,16 +4,17 @@
 \alias{pp_tbl}
 \title{Postpass tibble}
 \usage{
-pp_tbl(table = list_tables(), schema = NULL, name = NULL)
+pp_tbl(table = local_tables(), schema = NULL, name = NULL)
 }
 \arguments{
 \item{table}{A table name (or at least its suffix). You can retrieve a list
-of available table names by running \code{\link{list_tables}} or by taking
-a look at \href{https://github.com/woodpeck/postpass-ops/blob/main/SCHEMA.md}{SCHEMA.md}.}
+of available table names by running \code{\link{list_tables}} or
+\code{\link{pp_tables}}.}
 
 \item{schema}{Optionally, a schema dataframe. A schema should contain only
 columns accessible in the remote PostGIS database along with their prototype
-classes. If \code{NULL}, infers a schema from \code{table}.}
+classes. Schemas can be retrieved from \code{\link{pp_schema}}. If
+\code{NULL}, infers a schema from \code{table}.}
 
 \item{name}{If \code{schema} is provided, specifies the name of the Postpass
 table from which to query.}
@@ -25,7 +26,7 @@ A lazy tibble of class \code{pp_tbl}.
 Creates a lazy tibble based on a simulated Postgres database and a Postpass
 database schema. This tibble can be manipulated using \code{dplyr} functions.
 Each operation extends the SQL query which is then sent to the Postpass
-server by running \code{\link{collect}}. An object
+server by running \code{\link{collect}}.
 }
 \details{
 Note that all columns can be treated as either numeric or character vectors
