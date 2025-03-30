@@ -4,9 +4,10 @@ Title: Query 'OpenStreetMap' using 'dplyr'
 Version: 0.1.0
 Authors@R: 
     person("Jonas", "Lieth", , "jonas.lieth@gesis.org", role = c("aut", "cre"))
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: A tidy R interface to the 'Postpass' <https://postpass.geofabrik.de/>
+    service. Allows you to use dplyr syntax to retrieve OpenStreetMap data using
+    'dbplyr'.
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Depends: 
@@ -15,6 +16,7 @@ Imports:
     dbplyr,
     dplyr,
     httr2,
+    jsonlite,
     rlang,
     magrittr
 Suggests: 
