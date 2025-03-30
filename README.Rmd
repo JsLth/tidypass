@@ -36,8 +36,8 @@ This is a basic example which extracts all fast food restaurants in Karlsruhe al
 
 ```{r example}
 library(tidypass)
-library(dplyr)
-library(sf)
+library(dplyr, warn.conflicts = FALSE)
+library(sf, quietly = TRUE)
 
 # Boundaries of Karlsruhe
 bbox <- st_as_sfc(st_bbox(c(

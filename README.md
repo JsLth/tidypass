@@ -34,16 +34,8 @@ Karlsruhe along with their stated cuisine.
 
 ``` r
 library(tidypass)
-library(dplyr)
-#> 
-#> Attaching package: 'dplyr'
-#> The following objects are masked from 'package:stats':
-#> 
-#>     filter, lag
-#> The following objects are masked from 'package:base':
-#> 
-#>     intersect, setdiff, setequal, union
-library(sf)
+library(dplyr, warn.conflicts = FALSE)
+library(sf, quietly = TRUE)
 #> Linking to GEOS 3.13.0, GDAL 3.10.1, PROJ 9.5.1; sf_use_s2() is TRUE
 
 # Boundaries of Karlsruhe
