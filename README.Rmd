@@ -1,0 +1,56 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# tidypass
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+A tidy R interface to the [Postpass](https://github.com/woodpeck/postpass-ops) service. Allows you to use dplyr syntax to retrieve OpenStreetMap data using [`{dbplyr}`](https://dbplyr.tidyverse.org/). Postpass is a nice alternative to [Overpass Turbo](https://overpass-turbo.eu/) that is faster and more versatile because it uses a Postgres database in the background.
+
+## Installation
+
+You can install the development version of tidypass from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("jslth/tidypass")
+```
+
+## Example
+
+This is a basic example which extracts all fast food restaurants in Karlsruhe along with their stated cuisine.
+
+```{r example}
+library(tidypass)
+library(dplyr)
+library(sf)
+
+# Boundaries of Karlsruhe
+bbox <- st_as_sfc(st_bbox(c(
+  xmin = 8.34,
+  xmax = 8.46,
+  ymin = 48.97,
+  ymax = 49.03
+)))
+
+pp_tbl("point") |>
+  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+  mutate(cuisine = tags %->% "cuisine") |>
+  select(name, cuisine, way) |>
+  collect()
+```
+
