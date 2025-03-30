@@ -175,6 +175,22 @@ postpass <- function(sql,
 }
 
 
+last_import <- function() {
+  res <- postpass(
+    "SELECT
+      value as timestamp
+    FROM
+      osm2pgsql_properties
+    WHERE
+      property = 'import_timestamp'",
+    collection = FALSE,
+    geojson = FALSE
+  )
+
+  as.POSIXct(res, format = "%Y-%m-%dT%H:%M:%OSZ")
+}
+
+
 request_postpass <- function(sql, options) {
   req <- httr2::request(postpass_url())
   args <- c(list(req), data = list(sql), explode_options(options))
@@ -184,12 +200,18 @@ request_postpass <- function(sql, options) {
 }
 
 
-parse_postpass <- function(x, geojson, unwrap) {
+parse_postpass <- function(resp, geojson, unwrap) {
+  body <- httr2::resp_body_string(resp)
+
+  if (!jsonlite::validate(body)) {
+    return(body)
+  }
+
   if (geojson) {
-    res <- httr2::resp_body_string(x)
+    res <- httr2::resp_body_string(resp)
     res <- sf::read_sf(res)
   } else {
-    res <- httr2::resp_body_json(x, simplifyVector = TRUE)
+    res <- httr2::resp_body_json(resp, simplifyVector = TRUE)
     res <- dplyr::as_tibble(res$result)
   }
 
