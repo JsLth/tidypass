@@ -165,29 +165,15 @@ postpass <- function(sql,
     pretty = pretty
   )
 
-  res <- request_postpass(sql, options)
+  resp <- request_postpass(sql, options)
 
   if (parse) {
-    res <- parse_postpass(res, geojson = geojson, unwrap = unwrap)
+    res <- parse_postpass(resp, geojson = geojson, unwrap = unwrap)
+  } else {
+    res <- httr2::resp_body_string(resp)
   }
 
   res
-}
-
-
-last_import <- function() {
-  res <- postpass(
-    "SELECT
-      value as timestamp
-    FROM
-      osm2pgsql_properties
-    WHERE
-      property = 'import_timestamp'",
-    collection = FALSE,
-    geojson = FALSE
-  )
-
-  as.POSIXct(res, format = "%Y-%m-%dT%H:%M:%OSZ")
 }
 
 
