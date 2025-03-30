@@ -31,34 +31,34 @@
 #'   filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
 #'   mutate(phone = tags %->% "phone") |>
 #'   select(name, way, phone)
-"%->%" <- function(hstore, y) hstore(hstore, y, "->")
+"%->%" <- function(hstore, y) pg_op(hstore, y, "->")
 
 #' @rdname hstore
 #' @export
-"%?%" <- function(hstore, key) hstore(hstore, key, "?")
+"%?%" <- function(hstore, key) pg_op(hstore, key, "?")
 
 #' @rdname hstore
 #' @export
-"%?&%" <- function(hstore, key) hstore(hstore, key, "?&")
+"%?&%" <- function(hstore, key) pg_op(hstore, key, "?&")
 
 #' @rdname hstore
 #' @export
-"%?|%" <- function(hstore, key) hstore(hstore, key, "?|")
+"%?|%" <- function(hstore, key) pg_op(hstore, key, "?|")
 
 #' @rdname hstore
 #' @export
-"%-%" <- function(hstore, key) hstore(hstore, key, "-")
+"%-%" <- function(hstore, key) pg_op(hstore, key, "-")
 
 #' @rdname hstore
 #' @export
 hstore_zip <- function(hstore) {
-  hstore(hstore, "%%")
+  pg_op(hstore, "%%")
 }
 
 #' @rdname hstore
 #' @export
 hstore_2d <- function(hstore) {
-  hstore(hstore, "%#")
+  pg_op(hstore, "%#")
 }
 
 pg_op <- function(x, y, operator) {
