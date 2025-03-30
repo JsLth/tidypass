@@ -90,8 +90,8 @@ pp_tbl <- function(table = list_tables(), schema = NULL, name = NULL) {
 #'  \item{Slow queries: Over 50,000s, 2 workers}
 #' }
 #'
-#' Additionally, the PostGIS API is read-only. Queries can only retrieve data
-#' but not write, e.g. using \code{DROP TABLE}.
+#' Additionally, the PostGIS database is read-only. Queries can only retrieve
+#' data but not write, e.g., using \code{DROP TABLE}.
 #'
 #'
 #' @exportS3Method dplyr::collect
@@ -113,22 +113,8 @@ collect.pp_tbl <- function(x,
   options <- list(geojson = geojson, collection = collection, pretty = FALSE, ...)
   sql <- dbplyr::sql_render(x)
   sql <- sanitize_sql(sql)
-
   res <- request_postpass(sql, options)
-
-  if (geojson) {
-    res <- httr2::resp_body_string(res)
-    res <- sf::read_sf(res)
-  } else {
-    res <- httr2::resp_body_json(res, simplifyVector = TRUE)
-    res <- dplyr::as_tibble(res$result)
-  }
-
-  if (unwrap) {
-    res <- unwrap_tags(res)
-  }
-
-  res
+  parse_postpass(res, geojson = geojson, unwrap = unwrap)
 }
 
 
@@ -142,12 +128,76 @@ explain <- function(x) {
 }
 
 
+#' Send SQL to Postpass
+#' @description
+#' Low-level function to send an SQL query directly to Postpass.
+#'
+#' @param sql Character string containing a valid Postpass SQL query.
+#' @param pretty Whether to return a pretty unformatted JSON. Ignored if
+#' \code{parse} is \code{TRUE}.
+#' @param parse Whether to parse the response as a (sf) tibble. If \code{FALSE},
+#' returns the unparsed JSON as a character string.
+#' @inheritParams collect.pp_tbl
+#' @returns A (sf) tibble or a character string if \code{parse} is \code{FALSE}.
+#' @inherit collect.pp_tbl
+#'
+#' @examples
+#' \donttest{sql <- "
+#' SELECT
+#'   name, way
+#' FROM
+#'   planet_osm_point
+#' WHERE
+#'   amenity = 'fast_food'
+#'   AND tags -> 'addr:city' = 'Karlsruhe'
+#' "
+#'
+#' postpass(sql)}
+postpass <- function(sql,
+                     geojson = collection,
+                     collection = TRUE,
+                     pretty = FALSE,
+                     parse = TRUE,
+                     unwrap = TRUE) {
+  options <- list(
+    geojson = geojson,
+    collection = collection,
+    pretty = pretty
+  )
+
+  res <- request_postpass(sql, options)
+
+  if (parse) {
+    res <- parse_postpass(res, geojson = geojson, unwrap = unwrap)
+  }
+
+  res
+}
+
+
 request_postpass <- function(sql, options) {
   req <- httr2::request(postpass_url())
   args <- c(list(req), data = list(sql), explode_options(options))
   req <- do.call(httr2::req_body_form, args)
   req <- httr2::req_error(req, body = \(resp) httr2::resp_body_string(resp))
   httr2::req_perform(req)
+}
+
+
+parse_postpass <- function(x, geojson, unwrap) {
+  if (geojson) {
+    res <- httr2::resp_body_string(x)
+    res <- sf::read_sf(res)
+  } else {
+    res <- httr2::resp_body_json(x, simplifyVector = TRUE)
+    res <- dplyr::as_tibble(res$result)
+  }
+
+  if (unwrap) {
+    res <- unwrap_tags(res)
+  }
+
+  res
 }
 
 
