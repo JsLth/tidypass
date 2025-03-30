@@ -129,6 +129,18 @@ points |>
 
 
 ```{r}
-
+pp_tbl("polygon") |>
+  cross_join(pp_tbl("polygon")) |>
+  filter(
+    osm_id.x < osm_id.y,
+    way.x && !!pg_bbox(bbox),
+    way.y && !!pg_bbox(bbox),
+    !is.na(landuse.x),
+    !is.na(landuse.y),
+    st_overlaps(way.x, way.y)
+  ) |>
+  mutate(inter = st_intersection(way.x, way.y)) |>
+  select(inter, landuse1 = landuse.x, landuse2 = landuse.y) |>
+  collect()
 ```
 

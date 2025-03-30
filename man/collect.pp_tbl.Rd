@@ -4,17 +4,26 @@
 \alias{collect.pp_tbl}
 \title{Send SQL query to Postpass}
 \usage{
-\method{collect}{pp_tbl}(x, geometry = TRUE, collection = TRUE, ...)
+\method{collect}{pp_tbl}(x, geojson = collection, collection = TRUE, unwrap = TRUE, ...)
 }
 \arguments{
 \item{x}{A lazy tibble of class \code{\link{pp_tbl}}.}
 
-\item{geometry}{Whether to generate a geojson or not. If \code{TRUE}, returns
-an sf tibble, otherwise a normal tibble.}
+\item{geojson}{Whether to generate a GeoJSON or not. If \code{TRUE}, returns
+an sf tibble, otherwise a normal tibble. Should only be \code{TRUE} if
+\code{collection} is also \code{TRUE}, otherwise Postpass will not return
+a valid GeoJSON.}
 
-\item{collection}{Whether to aggregate results to a JSON or not
-\href{https://www.postgresql.org/docs/9.5/functions-aggregate.html}{\code{json_agg}}.
-If \code{FALSE}, a scalar must be returned by \code{x}.}
+\item{collection}{Whether to aggregate results to a JSON or not.
+If \code{FALSE}, a scalar must be returned by \code{x}, i.e. one row and one
+column. Necessary to compute single counts.}
+
+\item{unwrap}{Whether to convert the \code{tags} column to a dataframe.
+If \code{FALSE}, leaves tags as an unparsed JSON. If \code{TRUE}, parses it
+and inserts it to the position of the \code{tags} column using
+\code{\link{unwrap_tags}}.}
+
+\item{...}{Further parameters passed to Postpass.}
 }
 \value{
 A (sf) tibble.
@@ -22,4 +31,27 @@ A (sf) tibble.
 \description{
 Accepts a \code{dbplyr} query, sanitizes it, and sends it to Postpass.
 If the query is valid, returns a (sf) tibble.
+}
+\details{
+Postpass depends API overload by managing workers. Depending on their
+estimated complexity, queries are put in a slow, medium or quick queue.
+
+\itemize{
+ \item{Quick queries: Under 100s, 10 workers}
+ \item{Medium queries: Under 50,000s, 4 workers}
+ \item{Slow queries: Over 50,000s, 2 workers}
+}
+
+Additionally, the PostGIS API is read-only. Queries can only retrieve data
+but not write, e.g. using \code{DROP TABLE}.
+}
+\examples{
+\donttest{nc <- system.file("shape/nc.shp", package = "sf")
+surry <- nc[nc$NAME \%in\% "Surry", ]
+
+# Get all fast food restaurants in Surry, NC
+res <- pp_tbl("point") |>
+  filter(amenity == "fast_food" & way \%&&\% !!pg_bbox(surry)) |>
+  select(name, way, tags) |>
+  collect()}
 }

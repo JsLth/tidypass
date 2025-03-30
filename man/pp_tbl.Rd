@@ -4,7 +4,7 @@
 \alias{pp_tbl}
 \title{Postpass tibble}
 \usage{
-pp_tbl(table = list_tables(), schema = NULL)
+pp_tbl(table = list_tables(), schema = NULL, name = NULL)
 }
 \arguments{
 \item{table}{A table name (or at least its suffix). You can retrieve a list
@@ -14,6 +14,9 @@ a look at \href{https://github.com/woodpeck/postpass-ops/blob/main/SCHEMA.md}{SC
 \item{schema}{Optionally, a schema dataframe. A schema should contain only
 columns accessible in the remote PostGIS database along with their prototype
 classes. If \code{NULL}, infers a schema from \code{table}.}
+
+\item{name}{If \code{schema} is provided, specifies the name of the Postpass
+table from which to query.}
 }
 \value{
 A lazy tibble of class \code{pp_tbl}.

@@ -13,6 +13,8 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #' @param schema Optionally, a schema dataframe. A schema should contain only
 #' columns accessible in the remote PostGIS database along with their prototype
 #' classes. If \code{NULL}, infers a schema from \code{table}.
+#' @param name If \code{schema} is provided, specifies the name of the Postpass
+#' table from which to query.
 #'
 #' @returns A lazy tibble of class \code{pp_tbl}.
 #' @export
@@ -23,7 +25,7 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #'
 #' # provide a custom schema
 #' pp_tbl(schema = dplyr::tibble(amenity = character(1), way = list(NULL)))
-pp_tbl <- function(table = list_tables(), schema = NULL) {
+pp_tbl <- function(table = list_tables(), schema = NULL, name = NULL) {
   if (is.null(schema)) {
     rlang::arg_match(table)
     table <- sprintf("planet_osm_%s", table)
@@ -35,16 +37,10 @@ pp_tbl <- function(table = list_tables(), schema = NULL) {
   tbl <- dbplyr::tbl_lazy(
     schema,
     con = dbplyr::simulate_postgres(),
-    name = table %||% table_name()
+    name = table %||% name %||% table_name()
   )
   class(tbl) <- c("pp_tbl", class(tbl))
   tbl
-}
-
-
-sanitize_sql <- function(sql) {
-  gsub("\n", " ", sql) |>
-    gsub("`", "", x = _)
 }
 
 
@@ -55,42 +51,132 @@ sanitize_sql <- function(sql) {
 #'
 #' @param x A lazy tibble of class \code{\link{pp_tbl}}.
 #' @param geojson Whether to generate a GeoJSON or not. If \code{TRUE}, returns
-#' an sf tibble, otherwise a normal tibble.
-#' @param collection Whether to aggregate results to a JSON or not
-#' \href{https://www.postgresql.org/docs/9.5/functions-aggregate.html}{\code{json_agg}}.
-#' If \code{FALSE}, a scalar must be returned by \code{x}.
+#' an sf tibble, otherwise a normal tibble. Should only be \code{TRUE} if
+#' \code{collection} is also \code{TRUE}, otherwise Postpass will not return
+#' a valid GeoJSON.
+#' @param collection Whether to aggregate results to a JSON or not.
+#' If \code{FALSE}, a scalar must be returned by \code{x}, i.e. one row and one
+#' column. Necessary to compute single counts.
+#' @param unwrap Whether to convert the \code{tags} column to a dataframe.
+#' If \code{FALSE}, leaves tags as an unparsed JSON. If \code{TRUE}, parses it
+#' and inserts it to the position of the \code{tags} column using
+#' \code{\link{unwrap_tags}}.
+#' @param ... Further parameters passed to Postpass.
 #'
 #' @returns A (sf) tibble.
 #'
+#' @details
+#' Postpass depends API overload by managing workers. Depending on their
+#' estimated complexity, queries are put in a slow, medium or quick queue.
+#'
+#' \itemize{
+#'  \item{Quick queries: Under 100s, 10 workers}
+#'  \item{Medium queries: Under 50,000s, 4 workers}
+#'  \item{Slow queries: Over 50,000s, 2 workers}
+#' }
+#'
+#' Additionally, the PostGIS API is read-only. Queries can only retrieve data
+#' but not write, e.g. using \code{DROP TABLE}.
+#'
+#'
 #' @exportS3Method dplyr::collect
-collect.pp_tbl <- function(x, geojson = TRUE, collection = TRUE, ...) {
-  options <- list(geojson = geojson, collection = collection, ...)
+#'
+#' @examples
+#' \donttest{nc <- system.file("shape/nc.shp", package = "sf")
+#' surry <- nc[nc$NAME %in% "Surry", ]
+#'
+#' # Get all fast food restaurants in Surry, NC
+#' res <- pp_tbl("point") |>
+#'   filter(amenity == "fast_food" & way %&&% !!pg_bbox(surry)) |>
+#'   select(name, way, tags) |>
+#'   collect()}
+collect.pp_tbl <- function(x,
+                           geojson = collection,
+                           collection = TRUE,
+                           unwrap = TRUE,
+                           ...) {
+  options <- list(geojson = geojson, collection = collection, pretty = FALSE, ...)
   sql <- dbplyr::sql_render(x)
   sql <- sanitize_sql(sql)
-  resp <- request_postpass(sql, options)
+
+  res <- request_postpass(sql, options)
 
   if (geojson) {
-    resp <- httr2::resp_body_string(resp)
-    sf::read_sf(resp)
+    res <- httr2::resp_body_string(res)
+    res <- sf::read_sf(res)
   } else {
-    resp <- httr2::resp_body_json(resp, simplifyVector = TRUE)
-    dplyr::as_tibble(resp$result)
+    res <- httr2::resp_body_json(res, simplifyVector = TRUE)
+    res <- dplyr::as_tibble(res$result)
   }
+
+  if (unwrap) {
+    res <- unwrap_tags(res)
+  }
+
+  res
+}
+
+
+explain <- function(x) {
+  options = list(geojson = FALSE, collection = FALSE)
+  sql <- dbplyr::sql_render(x)
+  sql <- sanitize_sql(sql)
+  sql <- sprintf("EXPLAIN (%s)", sql)
+  res <- request_postpass(sql, options)
+  httr2::resp_body_string(res)
 }
 
 
 request_postpass <- function(sql, options) {
   req <- httr2::request(postpass_url())
-  req <- do.call(httr2::req_url_query, c(
-    list(req), data = sql, explode_options(options)
-  ))
-
-  cli::cli_verbatim(req$url)
-
-  req <- httr2::req_error(req, body = function(resp) {
-    httr2::resp_body_string(resp)
-  })
+  args <- c(list(req), data = list(sql), explode_options(options))
+  req <- do.call(httr2::req_body_form, args)
+  req <- httr2::req_error(req, body = \(resp) httr2::resp_body_string(resp))
   httr2::req_perform(req)
+}
+
+
+#' Unwrap tags
+#' @description
+#' Helper function to turn the \code{tags} column returned by
+#' \code{\link{collect}} to multiple columns in the same dataframe.
+#'
+#' @param x A dataframe returned by \code{\link{collect}} containing a
+#' \code{tags} column.
+#' @param keep Whether to keep the unparsed \code{tags} column or replace it.
+#' @returns A (sf) dataframe.
+#' @export
+#'
+#' @examples
+#' \donttest{nc <- system.file("shape/nc.shp", package = "sf")
+#' surry <- nc[nc$NAME %in% "Surry", ]
+#'
+#' res <- pp_tbl("point") |>
+#'   filter(amenity == "fast_food" & way %&&% !!pg_bbox(surry)) |>
+#'   select(name, way, tags) |>
+#'   collect(unwrap = FALSE)
+#'
+#' unwrap_tags(res)}
+unwrap_tags <- function(x, keep = FALSE) {
+  if (!"tags" %in% colnames(x)) {
+    return(x)
+  }
+
+  tags <- lapply(x$tags, jsonlite::fromJSON)
+  tags <- replace_empty_tags(tags)
+  tags <- dplyr::bind_rows(tags)
+  where <- ifelse(keep, "after", "replace")
+  insert_df(x, tags, position = "tags", where = where)
+}
+
+
+replace_empty_tags <- function(tags) {
+  n_tags <- lengths(tags)
+  dummy_key <- names(tags[n_tags][[1]])[1]
+  dummy_tag <- list(NA)
+  names(dummy_tag) <- dummy_key
+  tags[!n_tags] <- list(dummy_tag)
+  tags
 }
 
 
@@ -98,4 +184,10 @@ explode_options <- function(options) {
   vals <- tolower(unlist(options))
   names(vals) <- sprintf("options[%s]", names(options))
   vals
+}
+
+
+sanitize_sql <- function(sql) {
+  as.character(sql) |>
+    gsub("`", "\"", x = _)
 }

@@ -14,7 +14,9 @@ Depends:
 Imports: 
     dbplyr,
     dplyr,
-    httr2
+    httr2,
+    rlang,
+    magrittr
 Suggests: 
     knitr,
     parsermd,

@@ -1,86 +1,70 @@
 #' hstore operations
 #' @description
-#' Helper functions to work with hstores in \code{dbplyr} queries. In Postpass,
-#' all undefined tags are stored in a hstore can be queried using hstore
-#' operations.
-#'
-#' Currently supported:
+#' Due to the way \code{dbplyr} translates infix operators, there is a number
+#' of operators you can use to control Postgres/PostGIS queries. Some useful
+#' ones include:
 #'
 #' \itemize{
-#'  \item{\code{hs_values}: Returns the values of given keys (\code{->})}
-#'  \item{\code{hs_exists}: Checks if a key exists in an hstore (\code{?})}
-#'  \item{\code{hs_all}: Checks if all specified keys exist in an hstore (\code{?&})}
-#'  \item{\code{hs_all}: Checks if any specified keys exist in an hstore (\code{?|})}
-#'  \item{\code{hs_delete}: Deletes a key from an hstore (\code{-})}
-#'  \item{\code{hs_zip}: Interweaves keys and values in an array (\code{\%\%})}
-#'  \item{\code{hs_keyvalue}: Converts an hstore to a 2D key-value array (\code{\%#})}
+#'  \item{\code{\%->\%}: Extract keys \code{y} from hstore \code{x}}
+#'  \item{\code{\%?\%}: Check if key \code{y} is in hstore \code{x}}
+#'  \item{\code{\%?&\%}: Check if all keys \code{y} are in hstore \code{x}}
+#'  \item{\code{\%?|\%}: Check if any keys \code{y} are in hstore \code{x}}
+#'  \item{\code{\%-\%}: Remove a key \code{y} from hstore \code{x}}
+#'  \item{\code{hstore_zip}: Interweave keys and values of hstore \code{x}}
+#'  \item{\code{hstore_2d}: Convert hstore \code{x} to a 2D key-value array}
 #' }
 #'
-#' @param x Left-hand side operator
-#' @param y Right-hand side operator
+#' Note that in order to use (non-infix) functions, you need to inject them
+#' using \code{\link[rlang:!!]{!!}}.
+#'
+#' @param hstore Name of a database column containing the \code{hstore} data type.
+#' @param key Character string containing an \code{hstore} key.
 #' @returns A character string of class \code{sql}.
 #' @export
 #'
-#' @examples
-#' # example code
+#' @name hstore
 #'
-hs_values <- function(x, y) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  y <- rlang::expr_text(rlang::enexpr(y))
-  hstore(x, y, "->")
-}
+#' @examples
+#' library(dplyr)
+#'
+#' pp_tbl("point") |>
+#'   filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
+#'   mutate(phone = tags %->% "phone") |>
+#'   select(name, way, phone)
+"%->%" <- function(hstore, y) hstore(hstore, y, "->")
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_exists <- function(x, y) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  y <- rlang::expr_text(rlang::enexpr(y))
-  hstore(x, y, "?")
-}
+"%?%" <- function(hstore, key) hstore(hstore, key, "?")
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_all <- function(x, y) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  y <- rlang::expr_text(rlang::enexpr(y))
-  hstore(x, y, "?&")
-}
+"%?&%" <- function(hstore, key) hstore(hstore, key, "?&")
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_any <- function(x, y) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  y <- rlang::expr_text(rlang::enexpr(y))
-  hstore(x, y, "?|")
-}
+"%?|%" <- function(hstore, key) hstore(hstore, key, "?|")
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_delete <- function(x, y) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  y <- rlang::expr_text(rlang::enexpr(y))
-  hstore(x, y, "-")
-}
+"%-%" <- function(hstore, key) hstore(hstore, key, "-")
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_zip <- function(x) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  hstore(x, y, "#=")
+hstore_zip <- function(hstore) {
+  hstore(hstore, "%%")
 }
 
-#' @rdname hs_values
+#' @rdname hstore
 #' @export
-hs_keyvalue <- function(x) {
-  x <- rlang::expr_text(rlang::enexpr(x))
-  hstore(x, y, "%#")
+hstore_2d <- function(hstore) {
+  hstore(hstore, "%#")
 }
 
-hstore <- function(x, y, operator) {
+pg_op <- function(x, y, operator) {
   if (missing(y)) {
     sql(sprintf("%s %s", operator, x))
   } else {
     sql(sprintf("%s %s %s", x, operator, y))
   }
-
 }
