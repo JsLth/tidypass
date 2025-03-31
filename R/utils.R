@@ -13,13 +13,6 @@ regex_match <- function (text, pattern, i = NULL, ...) {
 }
 
 
-table_name <- function() {
-  vals <- c(letters, LETTERS, seq_len(9))
-  name <- paste0(sample(vals, 10, replace = TRUE), collapse = "")
-  paste0("postpass_", name)
-}
-
-
 insert_df <- function(x, y, position, where = "replace") {
   if (is.character(position)) {
     position <- which(position == names(x))

@@ -32,8 +32,23 @@ A (sf) tibble.
 Accepts a \code{dbplyr} query, sanitizes it, and sends it to Postpass.
 If the query is valid, returns a (sf) tibble.
 }
-\details{
-Postpass depends API overload by managing workers. Depending on their
+\section{Syntax}{
+
+\code{tidypass} queries mostly follow the dplyr syntax for data analysis.
+You can use most functions that work on database backends with some possible
+exceptions. Due to the special syntax of Postgres and PostGIS,
+\code{tidypass} provides some utilities to facilitate
+the translation from R to Postgres (see \code{\link[hstore]{hstore}} and
+\code{\link[postgis]{PostGIS}} utilities). Generally, operators like
+\code{&&} or \code{->} must be passed as infix operators, i.e.,
+\code{\%&&\%} and \code{\%->\%}. Utility functions and global objects must
+be injected in the traditional tidyverse manner using
+\code{\link[rlang]{!!}}.
+}
+
+\section{Limitations}{
+
+Postpass manages API overload by regulating workers. Depending on their
 estimated complexity, queries are put in a slow, medium or quick queue.
 
 \itemize{
@@ -45,6 +60,7 @@ estimated complexity, queries are put in a slow, medium or quick queue.
 Additionally, the PostGIS database is read-only. Queries can only retrieve
 data but not write, e.g., using \code{DROP TABLE}.
 }
+
 \examples{
 \donttest{nc <- system.file("shape/nc.shp", package = "sf")
 surry <- nc[nc$NAME \%in\% "Surry", ]

@@ -45,15 +45,24 @@ pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
     rlang::arg_match(table)
     table <- sprintf("planet_osm_%s", table)
     schema <- schemas[[table]]
-  } else {
-    table <- NULL
+  }
+
+  name <- name %||% attr(schema, "postpass_table")
+  if (is.null(name)) {
+    rlang::abort(c(
+      "Invalid schema provided. Table name is missing.",
+      "i" = paste(
+        "You can retrieve schemas using `pp_schema()` or provide a",
+        "table name manually using the `name` argument."
+      )
+    ))
   }
 
   schema <- schema_to_tbl(schema)
   tbl <- dbplyr::tbl_lazy(
     schema,
     con = dbplyr::simulate_postgres(),
-    name = table %||% name %||% table_name()
+    name = name
   )
   class(tbl) <- c("pp_tbl", class(tbl))
   tbl
@@ -81,8 +90,20 @@ pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
 #'
 #' @returns A (sf) tibble.
 #'
-#' @details
-#' Postpass depends API overload by managing workers. Depending on their
+#' @section Syntax:
+#' \code{tidypass} queries mostly follow the dplyr syntax for data analysis.
+#' You can use most functions that work on database backends with some possible
+#' exceptions. Due to the special syntax of Postgres and PostGIS,
+#' \code{tidypass} provides some utilities to facilitate
+#' the translation from R to Postgres (see \code{\link[hstore]{hstore}} and
+#' \code{\link[postgis]{PostGIS}} utilities). Generally, operators like
+#' \code{&&} or \code{->} must be passed as infix operators, i.e.,
+#' \code{\%&&\%} and \code{\%->\%}. Utility functions and global objects must
+#' be injected in the traditional tidyverse manner using
+#' \code{\link[rlang]{!!}}.
+#'
+#' @section Limitations:
+#' Postpass manages API overload by regulating workers. Depending on their
 #' estimated complexity, queries are put in a slow, medium or quick queue.
 #'
 #' \itemize{
@@ -93,7 +114,6 @@ pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
 #'
 #' Additionally, the PostGIS database is read-only. Queries can only retrieve
 #' data but not write, e.g., using \code{DROP TABLE}.
-#'
 #'
 #' @exportS3Method dplyr::collect
 #'
@@ -140,7 +160,7 @@ explain <- function(x) {
 #' returns the unparsed JSON as a character string.
 #' @inheritParams collect.pp_tbl
 #' @returns A (sf) tibble or a character string if \code{parse} is \code{FALSE}.
-#' @inherit collect.pp_tbl
+#' @inheritSection collect.pp_tbl Limitations
 #'
 #' @examples
 #' \donttest{sql <- "

@@ -42,8 +42,9 @@ A (sf) tibble or a character string if \code{parse} is \code{FALSE}.
 \description{
 Low-level function to send an SQL query directly to Postpass.
 }
-\details{
-Postpass depends API overload by managing workers. Depending on their
+\section{Limitations}{
+
+Postpass manages API overload by regulating workers. Depending on their
 estimated complexity, queries are put in a slow, medium or quick queue.
 
 \itemize{
@@ -55,6 +56,7 @@ estimated complexity, queries are put in a slow, medium or quick queue.
 Additionally, the PostGIS database is read-only. Queries can only retrieve
 data but not write, e.g., using \code{DROP TABLE}.
 }
+
 \examples{
 \donttest{sql <- "
 SELECT

@@ -47,7 +47,7 @@ pp_last_import <- function() {
 #' @rdname postpass_utils
 #' @export
 pp_tables <- function() {
-  setdiff(postpass(
+  res <- setdiff(postpass(
     "SELECT
       *
     FROM
@@ -63,10 +63,10 @@ pp_tables <- function() {
 #' @rdname postpass_utils
 #' @export
 pp_schema <- function(table) {
-  postpass(
+  res <- postpass(
     sprintf(
       "SELECT
-        column_name AS column, udt_name AS type
+        column_name AS column, udt_name AS type, table_name AS table
       FROM
         INFORMATION_SCHEMA.COLUMNS
       WHERE
@@ -75,6 +75,10 @@ pp_schema <- function(table) {
     ),
     geojson = FALSE
   )
+
+  attr(res, "postpass_table") <- unique(res$table)
+  res$table <- NULL
+  res
 }
 
 

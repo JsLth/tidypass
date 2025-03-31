@@ -18,7 +18,7 @@ schema_to_tbl <- function(schema) {
   if (!all(c("type", "column") %in% names(schema))) {
     rlang::abort(c(
       "Invalid schema provided. Columns \"type\" or \"column\" are missing.",
-      "i" = "You can retrieve schemas using `pp_peek()`."
+      "i" = "You can retrieve schemas using `pp_schema()`."
     ))
   }
 
