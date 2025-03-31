@@ -71,14 +71,14 @@ point_sql <- pp_tbl("point") |>
     tags %?% 'addr:street' &
     !tags %?% 'addr:postcode' &
     way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags)
+  select(osm_id, way)
 
 poly_sql <- pp_tbl("polygon") |>
   filter(
     tags %?% 'addr:street' &
     !tags %?% 'addr:postcode' &
     way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags)
+  select(osm_id, way)
 
 union(point_sql, poly_sql) |>
   collect()
