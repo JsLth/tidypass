@@ -27,6 +27,7 @@ schema_to_tbl <- function(schema) {
     switch,
     int4 = integer(1),
     int8 = bigint(1),
+    float4 = double(1),
     text = character(1),
     jsonb = new_pg_jsonb(1),
     hstore = new_pg_hstore(1),
