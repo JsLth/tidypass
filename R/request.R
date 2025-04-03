@@ -1,4 +1,6 @@
-postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
+postpass_url <- function() sprintf(
+  "https://postpass.geofabrik.de/api/%s", PP_VERSION
+)
 
 #' Postpass tibble
 #' @description
@@ -40,11 +42,19 @@ postpass_url <- function() "https://postpass.geofabrik.de/api/0.1/interpreter"
 #'
 #' # provide a custom schema
 #' pp_tbl(schema = dplyr::tibble(amenity = character(1), way = list(NULL)))
-pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
+pp_tbl <- function(table, schema = NULL, name = NULL) {
   if (is.null(schema)) {
-    rlang::arg_match(table)
-    table <- sprintf("planet_osm_%s", table)
+    if (!any(startsWith(table, c("postpass", "planet_osm")))) {
+      table <- sprintf("postpass_%s", table)
+    }
     schema <- schemas[[table]]
+  }
+
+  if (is.null(schema)) {
+    rlang::abort(c(
+      sprintf("The provided table '%s' does not exist.", table),
+      "i" = "You can run `pp_tables()` to find out which tables exist."
+    ))
   }
 
   name <- name %||% attr(schema, "postpass_table")
@@ -118,7 +128,8 @@ pp_tbl <- function(table = local_tables(), schema = NULL, name = NULL) {
 #' @exportS3Method dplyr::collect
 #'
 #' @examples
-#' \donttest{nc <- system.file("shape/nc.shp", package = "sf")
+#' \donttest{library(sf)
+#' nc <- read_sf(system.file("shape/nc.shp", package = "sf"))
 #' surry <- nc[nc$NAME %in% "Surry", ]
 #'
 #' # Get all fast food restaurants in Surry, NC
@@ -134,7 +145,7 @@ collect.pp_tbl <- function(x,
   options <- list(geojson = geojson, collection = collection, pretty = FALSE, ...)
   sql <- dbplyr::sql_render(x)
   sql <- sanitize_sql(sql)
-  res <- request_postpass(sql, options)
+  res <- request_postpass("interpreter", sql, options)
   parse_postpass(res, geojson = geojson, unwrap = unwrap)
 }
 
@@ -143,8 +154,7 @@ explain <- function(x) {
   options = list(geojson = FALSE, collection = FALSE)
   sql <- dbplyr::sql_render(x)
   sql <- sanitize_sql(sql)
-  sql <- sprintf("EXPLAIN (%s)", sql)
-  res <- request_postpass(sql, options)
+  res <- request_postpass("explain", sql, options)
   httr2::resp_body_string(res)
 }
 
@@ -179,14 +189,15 @@ postpass <- function(sql,
                      collection = TRUE,
                      pretty = FALSE,
                      parse = TRUE,
-                     unwrap = TRUE) {
+                     unwrap = TRUE,
+                     endpoint = "interpreter") {
   options <- list(
     geojson = geojson,
     collection = collection,
     pretty = pretty
   )
 
-  resp <- request_postpass(sql, options)
+  resp <- request_postpass(endpoint, sql, options)
 
   if (parse) {
     res <- parse_postpass(resp, geojson = geojson, unwrap = unwrap)
@@ -198,8 +209,9 @@ postpass <- function(sql,
 }
 
 
-request_postpass <- function(sql, options) {
+request_postpass <- function(endpoint = "interpreter", sql, options) {
   req <- httr2::request(postpass_url())
+  req <- httr2::req_url_path_append(req, endpoint)
   args <- c(list(req), data = list(sql), explode_options(options))
   req <- do.call(httr2::req_body_form, args)
   req <- httr2::req_error(req, body = \(resp) httr2::resp_body_string(resp))

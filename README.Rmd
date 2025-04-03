@@ -32,7 +32,7 @@ pak::pak("jslth/tidypass")
 
 ## Example
 
-This is a basic example which extracts all fast food restaurants in Karlsruhe along with their stated cuisine.
+This is a basic example which extracts all fast food restaurants in Karlsruhe along with their stated cuisine. Generally, only the four columns can be accessed directly (`tags`, `osm_id`, `osm_type`, and `geom`) and all other features have to be extracted from the tags list using the `%->>%` operator.
 
 ```{r example}
 library(tidypass)
@@ -48,9 +48,8 @@ bbox <- st_as_sfc(st_bbox(c(
 )))
 
 pp_tbl("point") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  mutate(cuisine = tags %->% "cuisine") |>
-  select(name, cuisine, way) |>
-  collect()
+    filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+    transmute(cuisine = tags %->>% "cuisine", name = tags %->>% 'name', geom) |>
+    collect()
 ```
 

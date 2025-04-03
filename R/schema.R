@@ -29,6 +29,7 @@ schema_to_tbl <- function(schema) {
     int8 = bigint(1),
     float4 = double(1),
     text = character(1),
+    bpchar = character(1),
     jsonb = new_pg_jsonb(1),
     hstore = new_pg_hstore(1),
     geometry = new_pg_geom(1)

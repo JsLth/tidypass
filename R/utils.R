@@ -50,3 +50,14 @@ insert_df_impl <- function(x, y, start, end) {
     dplyr::bind_cols(before, y, after)
   }
 }
+
+
+num_to_letter <- function(num) {
+  if (num > length(letters)) {
+    quo <- (num - 1) / 26
+    rest <- (num - 1) %% 26
+    paste0(num_to_letter(quo), letters[rest + 1])
+  } else {
+    letters[num]
+  }
+}

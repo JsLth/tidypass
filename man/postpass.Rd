@@ -10,7 +10,8 @@ postpass(
   collection = TRUE,
   pretty = FALSE,
   parse = TRUE,
-  unwrap = TRUE
+  unwrap = TRUE,
+  endpoint = "interpreter"
 )
 }
 \arguments{

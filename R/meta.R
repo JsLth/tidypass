@@ -6,6 +6,9 @@
 #' \itemize{
 #'  \item{\code{pp_last_import} returns the date-time of the last OSM import.}
 #'  \item{\code{pp_tables} returns the names of the database tables.}
+#'  \item{\code{pp_views} returns the names of the database views. These
+#'  include legacy tables for backwards compatibility and blended tables
+#'  (e.g. point-line or line-polygon).}
 #'  \item{\code{pp_schema} returns the schema of a given table.}
 #'  \item{\code{pp_columns} returns the column names of a given table.}
 #'  \item{\code{pp_peek} returns the first few rows of a given table.}
@@ -13,6 +16,8 @@
 #'
 #' @param table A table name. A list of names can be retrieved using
 #' \code{pp_tables}.
+#' @param include_views If \code{TRUE}, returns both main tables and views. Defaults
+#' to \code{FALSE}.
 #' @param limit Number of rows to return. Defaults to 10.
 #'
 #' @returns \code{pp_last_import} returns a date-time object. \code{pp_tables}
@@ -46,8 +51,8 @@ pp_last_import <- function() {
 
 #' @rdname postpass_utils
 #' @export
-pp_tables <- function() {
-  res <- setdiff(postpass(
+pp_tables <- function(include_views = FALSE) {
+  tables <- setdiff(postpass(
     "SELECT
       *
     FROM
@@ -57,6 +62,27 @@ pp_tables <- function() {
       AND tableowner = 'osm'",
     geojson = FALSE
   )$tablename, "osm2pgsql_properties")
+
+  if (include_views) {
+    tables <- c(tables, pp_views())
+  }
+
+  tables
+}
+
+
+#' @rdname postpass_utils
+#' @export
+pp_views <- function() {
+  setdiff(postpass(
+    "SELECT
+      *
+    FROM
+      INFORMATION_SCHEMA.VIEWS
+    WHERE
+      table_schema = 'public'",
+    geojson = FALSE
+  )$table_name, c("geography_columns", "geometry_columns"))
 }
 
 

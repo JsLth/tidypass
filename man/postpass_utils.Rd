@@ -4,6 +4,7 @@
 \alias{postpass_utils}
 \alias{pp_last_import}
 \alias{pp_tables}
+\alias{pp_views}
 \alias{pp_schema}
 \alias{pp_columns}
 \alias{pp_peek}
@@ -11,7 +12,9 @@
 \usage{
 pp_last_import()
 
-pp_tables()
+pp_tables(include_views = FALSE)
+
+pp_views()
 
 pp_schema(table)
 
@@ -20,6 +23,9 @@ pp_columns(table)
 pp_peek(table, limit = 10)
 }
 \arguments{
+\item{include_views}{If \code{TRUE}, returns both main tables and views. Defaults
+to \code{FALSE}.}
+
 \item{table}{A table name. A list of names can be retrieved using
 \code{pp_tables}.}
 
@@ -37,6 +43,9 @@ Postpass.
 \itemize{
  \item{\code{pp_last_import} returns the date-time of the last OSM import.}
  \item{\code{pp_tables} returns the names of the database tables.}
+ \item{\code{pp_views} returns the names of the database views. These
+ include legacy tables for backwards compatibility and blended tables
+ (e.g. point-line or line-polygon).}
  \item{\code{pp_schema} returns the schema of a given table.}
  \item{\code{pp_columns} returns the column names of a given table.}
  \item{\code{pp_peek} returns the first few rows of a given table.}

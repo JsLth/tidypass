@@ -62,7 +62,8 @@ data but not write, e.g., using \code{DROP TABLE}.
 }
 
 \examples{
-\donttest{nc <- system.file("shape/nc.shp", package = "sf")
+\donttest{library(sf)
+nc <- read_sf(system.file("shape/nc.shp", package = "sf"))
 surry <- nc[nc$NAME \%in\% "Surry", ]
 
 # Get all fast food restaurants in Surry, NC

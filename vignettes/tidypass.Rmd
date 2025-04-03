@@ -27,20 +27,20 @@ bbox <- st_as_sfc(st_bbox(c(
 )))
 
 pp_tbl("point") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags) |>
+  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  transmute(name = tags %->>% 'name', geom) |>
   collect()
 ```
 
-
 ```{r}
+# BAD
 point_sql <- pp_tbl("point") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags)
+  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  transmute(name = tags %->>% 'name', geom)
 
 poly_sql <- pp_tbl("polygon") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags)
+  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  transmute(name = tags %->>% 'name', geom)
 
 union(point_sql, poly_sql) |>
   collect()
@@ -48,10 +48,32 @@ union(point_sql, poly_sql) |>
 
 
 ```{r}
+# Better!
+pp_tbl("pointpolygon") |>
+  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  transmute(name = tags %->>% 'name', geom) |>
+  collect()
+```
+
+```{r}
 pp_tbl("point") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  group_by(amenity) |>
-  summarise(count = n(), amenity = amenity) |>
+  unwrap(tags %->>% c("amenity", "cuisine")) |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  group_by(cuisine) |>
+  summarise(cuisine = cuisine, count = n()) |>
+  arrange(desc(count)) |>
+  collect(geojson = FALSE)
+```
+
+
+```{r}
+pp_tbl("point") |>
+  unwrap(tags %->>% c("amenity", "cuisine")) |>
+  mutate(cuisine = regexp_split_to_table(tags %->>% 'cuisine', ";")) |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  group_by(cuisine) |>
+  summarise(cuisine = cuisine, count = n()) |>
+  arrange(desc(count)) |>
   collect(geojson = FALSE)
 ```
 
@@ -59,40 +81,33 @@ pp_tbl("point") |>
 
 ```{r}
 pp_tbl("line") |>
-  filter(route == "tram" & ref == "3" & way %&&% !!pg_bbox(bbox)) |>
-  select(name, way, tags) |>
+  unwrap(tags %->>% c("name", "route", "ref")) |>
+  filter(route == "tram" & ref == "3" & geom %&&% !!pg_bbox(bbox)) |>
+  select(name, geom) |>
   collect()
 ```
 
 
 ```{r}
-point_sql <- pp_tbl("point") |>
+pp_tbl("pointpolygon") |>
   filter(
     tags %?% 'addr:street' &
     !tags %?% 'addr:postcode' &
-    way %&&% !!pg_bbox(bbox)) |>
-  select(osm_id, way)
-
-poly_sql <- pp_tbl("polygon") |>
-  filter(
-    tags %?% 'addr:street' &
-    !tags %?% 'addr:postcode' &
-    way %&&% !!pg_bbox(bbox)) |>
-  select(osm_id, way)
-
-union(point_sql, poly_sql) |>
+    geom %&&% !!pg_bbox(bbox)) |>
+  select(osm_id, geom) |>
   collect()
 ```
 
 ```{r}
 pp_tbl("point") |>
-  filter(ref == "15398") |>
-  select(osm_id, way) |>
+  filter(tags %->>% "ref" == "15398") |>
+  select(osm_id, geom) |>
   collect()
 
 pp_tbl("polygon") |>
+  unwrap(tags %->>% c("name", "boundary")) |>
   filter(name == "München" & boundary == "administrative") |>
-  select(osm_id, way) |>
+  select(osm_id, geom) |>
   collect()
 ```
 

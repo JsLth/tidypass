@@ -4,7 +4,7 @@
 \alias{pp_tbl}
 \title{Postpass tibble}
 \usage{
-pp_tbl(table = local_tables(), schema = NULL, name = NULL)
+pp_tbl(table, schema = NULL, name = NULL)
 }
 \arguments{
 \item{table}{A table name (or at least its suffix). You can retrieve a list
