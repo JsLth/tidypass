@@ -107,11 +107,11 @@ pg_op <- function(x, y, operator) {
   x <- expr_text(rlang::quo_get_expr(x))
   x <- string_to_varchar(x)
   if (missing(y)) {
-    sql(sprintf("%s %s", operator, x))
+    dbplyr::sql(sprintf("%s %s", operator, x))
   } else {
     y <- expr_text(rlang::quo_get_expr(y))
     y <- string_to_varchar(y)
-    sql(sprintf("%s %s %s", x, operator, y))
+    dbplyr::sql(sprintf("%s %s %s", x, operator, y))
   }
 }
 
