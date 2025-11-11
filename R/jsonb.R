@@ -81,16 +81,14 @@
 #' @export
 #' @examples
 #' pp_tbl("point") |>
-#'    unwrap(tags %->>% c("amenity", "cuisine", "name", "email"))
+#'    unwrap(amenity, cuisine, name, email)
 unwrap <- function(query, ...) {
   quosures <- rlang::quos(..., .ignore_empty = "all")
   keys <- NULL
   n_quos <- length(quosures)
   sql <- lapply(seq_len(n_quos), function(i) {
-    cl <- quosures[[i]][[2]]
-    jsonb <- cl[[2]]
-    keys <- eval(cl[[3]])
-    extr <- (!!jsonb) %->>% !!keys
+    keys <- rlang::expr_deparse(quosures[[i]][[2]])
+    extr <- tags %->>% !!keys
     names(extr) <- keys
     extr
   })
@@ -100,7 +98,11 @@ unwrap <- function(query, ...) {
   sql <- as.list(sql)
   names(sql) <- keys
   sql <- lapply(sql, dbplyr::sql)
-  dplyr::mutate(dplyr::select(query, !!!colnames(query)), !!!sql)
+  query_raw <- query
+  class(query_raw) <- setdiff(class(query_raw), "pp_tbl")
+  out <- dplyr::mutate(dplyr::select(query_raw, !!!colnames(query)), !!!sql)
+  class(out) <- c("pp_tbl", class(out))
+  out
 }
 
 pg_op <- function(x, y, operator) {
