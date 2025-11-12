@@ -58,17 +58,33 @@ pages_to_mb <- function(pages) {
 
 
 format_bytes <- function(x) {
-  sizes <- list(kb = 1024, mb = 1048576, gb = 1073741824)
+  sizes <- list(
+    kb = 1024,
+    mb = 1.048576e+06,
+    gb = 1.073742e+09,
+    tb = 1.099512e+12,
+    pb = 1.1259e+15,
+    eb = 1.152922e+18
+  )
 
   unit <- "bytes"
-  if (x > sizes$gb) {
-    unit <- "GB"
+  if (x > sizes$eb) {
+    unit <- "exabytes"
+    x <- x / sizes$eb
+  } else if (x > sizes$pb) {
+    unit <- "petabytes"
+    x <- x / sizes$pb
+  } else if (x > sizes$tb) {
+    unit <- "terabytes"
+    x <- x / sizes$tb
+  } else if (x > sizes$gb) {
+    unit <- "gigabytes"
     x <- x / sizes$gb
   } else if (x > sizes$mb) {
-    unit <- "MB"
+    unit <- "megabytes"
     x <- x / sizes$mb
   } else if (x > sizes$kb) {
-    unit <- "kB"
+    unit <- "kilobytes"
     x <- x / sizes$kb
   }
 
