@@ -29,23 +29,23 @@
 #'   mutate(amenity = tags %->>% 'amenity', phone = tags %->>% 'phone')
 #'   filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
 #'   select(name, way, phone)
-"%->>%" <- function(agg, y) pg_op(rlang::enquo(agg), rlang::enquo(y), "->>")
+"%->>%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(key), "->>")
 
 #' @rdname agg
 #' @export
-"%?%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(y), "?")
+"%?%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(key), "?")
 
 #' @rdname agg
 #' @export
-"%?&%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(y), "?&")
+"%?&%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(key), "?&")
 
 #' @rdname agg
 #' @export
-"%?|%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(y), "?|")
+"%?|%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(key), "?|")
 
 #' @rdname agg
 #' @export
-"%-%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(y), "-")
+"%-%" <- function(agg, key) pg_op(rlang::enquo(agg), rlang::enquo(key), "-")
 
 
 #' Unwrap jsonb
@@ -86,16 +86,16 @@ unwrap <- function(query, ...) {
   quosures <- rlang::quos(..., .ignore_empty = "all")
   keys <- NULL
   n_quos <- length(quosures)
+  tags_name <- lazy_tbl_get_default_name(query, "tags")
   sql <- lapply(seq_len(n_quos), function(i) {
     keys <- rlang::expr_deparse(quosures[[i]][[2]])
-    extr <- tags %->>% !!keys
+    extr <- (!!tags_name) %->>% !!keys
     names(extr) <- keys
     extr
   })
   sql <- unlist(sql)
   keys <- names(sql)
-  sql <- unname(sql)
-  sql <- as.list(sql)
+  sql <- as.list(unname(sql))
   names(sql) <- keys
   sql <- lapply(sql, dbplyr::sql)
   query_raw <- query
@@ -104,6 +104,7 @@ unwrap <- function(query, ...) {
   class(out) <- c("pp_tbl", class(out))
   out
 }
+
 
 pg_op <- function(x, y, operator) {
   x <- expr_text(rlang::quo_get_expr(x))
@@ -131,4 +132,10 @@ expr_text <- function(expr) {
 
 string_to_varchar <- function(x) {
   gsub("\"", "'", x)
+}
+
+
+lazy_tbl_get_default_name <- function(tbl, var) {
+  vars <- tbl$lazy_query$vars
+  vars[vars$var == var, ]$name[1]
 }
