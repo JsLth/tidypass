@@ -2,9 +2,12 @@
 % Please edit documentation in R/request.R
 \name{collect.pp_tbl}
 \alias{collect.pp_tbl}
+\alias{explain.pp_tbl}
 \title{Send SQL query to Postpass}
 \usage{
 \method{collect}{pp_tbl}(x, geojson = collection, collection = TRUE, unwrap = TRUE, ...)
+
+\method{explain}{pp_tbl}(x)
 }
 \arguments{
 \item{x}{A lazy tibble of class \code{\link{pp_tbl}}.}

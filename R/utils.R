@@ -61,3 +61,8 @@ num_to_letter <- function(num) {
     letters[num]
   }
 }
+
+
+nice <- function(x) {
+  sub("\\.?0+$", "", sprintf("%.2f", x))
+}

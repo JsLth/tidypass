@@ -21,6 +21,7 @@ Helper function to turn the \code{tags} column returned by
 }
 \examples{
 \donttest{nc <- system.file("shape/nc.shp", package = "sf")
+nc <- sf::read_sf(nc)
 surry <- nc[nc$NAME \%in\% "Surry", ]
 
 res <- pp_tbl("point") |>

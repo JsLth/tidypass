@@ -18,9 +18,12 @@ Imports:
     httr2,
     jsonlite,
     rlang,
+    cli,
     magrittr
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
+Config/testthat/edition: 3

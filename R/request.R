@@ -126,6 +126,7 @@ pp_tbl <- function(table, schema = NULL, name = NULL) {
 #' data but not write, e.g., using \code{DROP TABLE}.
 #'
 #' @exportS3Method dplyr::collect
+#' @importFrom dplyr collect
 #'
 #' @examples
 #' \donttest{library(sf)
@@ -147,15 +148,6 @@ collect.pp_tbl <- function(x,
   sql <- sanitize_sql(sql)
   res <- request_postpass("interpreter", sql, options)
   parse_postpass(res, geojson = geojson, unwrap = unwrap)
-}
-
-
-explain <- function(x) {
-  options = list(geojson = FALSE, collection = FALSE)
-  sql <- dbplyr::sql_render(x)
-  sql <- sanitize_sql(sql)
-  res <- request_postpass("explain", sql, options)
-  httr2::resp_body_string(res)
 }
 
 
@@ -255,6 +247,7 @@ parse_postpass <- function(resp, geojson, unwrap) {
 #'
 #' @examples
 #' \donttest{nc <- system.file("shape/nc.shp", package = "sf")
+#' nc <- sf::read_sf(nc)
 #' surry <- nc[nc$NAME %in% "Surry", ]
 #'
 #' res <- pp_tbl("point") |>
