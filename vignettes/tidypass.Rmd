@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(tidypass)
+library(dplyr)
 ```
 
 ```{r}
@@ -27,20 +28,20 @@ bbox <- st_as_sfc(st_bbox(c(
 )))
 
 pp_tbl("point") |>
-  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
-  transmute(name = tags %->>% 'name', geom) |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(name, geom) |>
   collect()
 ```
 
 ```{r}
 # BAD
 point_sql <- pp_tbl("point") |>
-  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
-  transmute(name = tags %->>% 'name', geom)
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(name, geom)
 
 poly_sql <- pp_tbl("polygon") |>
-  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
-  transmute(name = tags %->>% 'name', geom)
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(name, geom)
 
 union(point_sql, poly_sql) |>
   collect()
@@ -50,14 +51,13 @@ union(point_sql, poly_sql) |>
 ```{r}
 # Better!
 pp_tbl("pointpolygon") |>
-  filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
-  transmute(name = tags %->>% 'name', geom) |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(name, geom) |>
   collect()
 ```
 
 ```{r}
 pp_tbl("point") |>
-  unwrap(tags %->>% c("amenity", "cuisine")) |>
   filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
   group_by(cuisine) |>
   summarise(cuisine = cuisine, count = n()) |>
@@ -68,9 +68,8 @@ pp_tbl("point") |>
 
 ```{r}
 pp_tbl("point") |>
-  unwrap(tags %->>% c("amenity", "cuisine")) |>
-  mutate(cuisine = regexp_split_to_table(tags %->>% 'cuisine', ";")) |>
   filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  mutate(cuisine = regexp_split_to_table(cuisine, ";")) |>
   group_by(cuisine) |>
   summarise(cuisine = cuisine, count = n()) |>
   arrange(desc(count)) |>
@@ -81,7 +80,6 @@ pp_tbl("point") |>
 
 ```{r}
 pp_tbl("line") |>
-  unwrap(tags %->>% c("name", "route", "ref")) |>
   filter(route == "tram" & ref == "3" & geom %&&% !!pg_bbox(bbox)) |>
   select(name, geom) |>
   collect()
@@ -100,12 +98,11 @@ pp_tbl("pointpolygon") |>
 
 ```{r}
 pp_tbl("point") |>
-  filter(tags %->>% "ref" == "15398") |>
+  filter(ref == "15398") |>
   select(osm_id, geom) |>
   collect()
 
 pp_tbl("polygon") |>
-  unwrap(tags %->>% c("name", "boundary")) |>
   filter(name == "München" & boundary == "administrative") |>
   select(osm_id, geom) |>
   collect()
@@ -126,8 +123,8 @@ polys <- pp_tbl("polygon")
 points |>
   cross_join(polys) |>
   filter(
-    way.y %&&% !!pg_bbox(bbox) &
-    st_contains(way.y, way.x) &
+    geom.y %&&% !!pg_bbox(bbox) &
+    st_contains(geom.y, geom.x) &
     tags.x %->% 'addr:postcode' %<>% tags.y %->% 'postal_code'
   ) |>
   mutate(
@@ -136,7 +133,7 @@ points |>
   ) |>
   select(
     osm_id = osm_id.x,
-    way = way.x,
+    way = geom.x,
     punkt_plz,
     poly_plz
   )
@@ -147,14 +144,14 @@ points |>
 pp_tbl("polygon") |>
   cross_join(pp_tbl("polygon")) |>
   filter(
-    osm_id.x < osm_id.y,
-    way.x %&&% !!pg_bbox(bbox),
-    way.y %&&% !!pg_bbox(bbox),
-    !is.na(landuse.x),
-    !is.na(landuse.y),
-    st_overlaps(way.x, way.y)
+    tags.x %->>% osm_id.x < tags.y %->>% osm_id.y,
+    geom.x %&&% !!pg_bbox(bbox),
+    geom.y %&&% !!pg_bbox(bbox),
+    !is.na(tags.x %->>% landuse.x),
+    !is.na(tags.y %->>% landuse.y),
+    st_overlaps(geom.x, geom.y)
   ) |>
-  mutate(inter = st_intersection(way.x, way.y)) |>
+  mutate(inter = st_intersection(geom.x, geom.y)) |>
   select(inter, landuse1 = landuse.x, landuse2 = landuse.y) |>
   collect()
 ```
