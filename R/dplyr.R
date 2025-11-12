@@ -103,7 +103,7 @@ unwrap_expr <- function(.data, ...) {
   quos <- rlang::enquos(...)
   env <- rlang::quo_get_env(quos[[1]])
   vars <- unique(unlist(lapply(quos, vars_from_expr)))
-  tbl_syms <- names(.data$lazy_query$x)
+  tbl_syms <- lazy_tbl_vars(.data)
   vars <- setdiff(vars, tbl_syms)
   vars <- lapply(vars, as.name)
   unwrap(.data, !!!vars)
@@ -122,4 +122,10 @@ vars_from_expr <- function(q) {
 #' Determines whether a symbol is found in the search path of an environment
 var_known <- function(sym, env) {
   rlang::env_has(env, sym, inherit = TRUE)
+}
+
+
+lazy_tbl_vars <- function(tbl) {
+  tbl$lazy_query$vars$name %||%
+    tbl$lazy_query$select$name
 }
