@@ -89,7 +89,7 @@ unwrap <- function(query, ...) {
   tags_name <- lazy_tbl_get_default_name(query, "tags")
   sql <- lapply(seq_len(n_quos), function(i) {
     keys <- rlang::expr_deparse(quosures[[i]][[2]])
-    extr <- (!!tags_name) %->>% !!keys
+    extr <- (!!as.name(tags_name)) %->>% !!keys
     names(extr) <- keys
     extr
   })
@@ -137,5 +137,10 @@ string_to_varchar <- function(x) {
 
 lazy_tbl_get_default_name <- function(tbl, var) {
   vars <- tbl$lazy_query$vars
-  vars[vars$var == var, ]$name[1]
+
+  if (!is.character(vars)) {
+    vars[vars$var == var, ]$name[1]
+  } else {
+    vars[vars == var][1]
+  }
 }
