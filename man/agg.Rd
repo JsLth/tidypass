@@ -9,7 +9,7 @@
 \alias{\%-\%}
 \title{hstore/jsonb operations}
 \usage{
-agg \%->>\% y
+agg \%->>\% key
 
 agg \%?\% key
 

@@ -126,7 +126,8 @@ var_known <- function(sym, env) {
 
 
 lazy_tbl_vars <- function(tbl) {
-  vars <- tbl$lazy_query$vars
+  vars <- tbl$lazy_query$vars %||%
+    colnames(tbl)
 
   if (!is.character(vars)) {
     vars <- tbl$lazy_query$vars$name

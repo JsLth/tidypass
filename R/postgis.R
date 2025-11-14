@@ -35,6 +35,21 @@
 #'
 #' pg_geom(nc[1,])
 #' pg_bbox(nc)
+filter_spatial <- function(.data, geom, .predicate = "intersects") {
+  .predicate <- to_title(.predicate)
+  .predicate <- sprintf("ST_%s", .predicate)
+
+  if (inherits(geom, c("sf", "sfc", "SpatVector"))) {
+    geom <- sf::st_geometry(sf::st_as_sf(geom))
+    geom <- pg_geom(geom)
+  } else {
+    geom <- pg_bbox(geom)
+  }
+
+  filter(.data, dbplyr::sql(sprintf("%s(%s, %s)", .predicate, "geom", geom)))
+}
+
+
 pg_geom <- function(x) {
   x <- sf::st_geometry(x)
   if (length(x) > 1) x <- sf::st_union(x)
@@ -46,9 +61,40 @@ pg_geom <- function(x) {
 #' @rdname postgis
 #' @export
 pg_bbox <- function(x) {
+  if (is.numeric(x) && !length(names(x))) {
+    names(x) <- c("xmin", "xmax", "ymin", "ymax")
+  }
+
+  if (is.numeric(x) && length(names(x))) {
+    x <- x[c("xmin", "xmax", "ymin", "ymax")]
+  }
+
   bbox <- sf::st_bbox(x)
-  dbplyr::sql(st_makebox(bbox, crs = sf::st_crs(x)$epsg %|||% 4326))
+  dbplyr::sql(st_makebox(bbox, crs = sf::st_crs(bbox)$epsg %|||% 4326))
 }
+
+
+pg_place <- function(x, ..., osm_tag = "boundary", box = FALSE) {
+  entity <- photon::geocode(x, osm_tag = osm_tag, ...)
+
+  if (!nrow(entity)) {
+    cli::cli_abort(c(
+      "Geocoding was not successful.",
+      "i" = "Retrieved 0 elements matching {.val {x}}."
+    ))
+  }
+
+  pp_tbl("polygon") |>
+    select(osm_id, tags, geom) |>
+    filter(
+      dplyr::sql(sprintf("CAST(osm_id AS CHAR) = '%s'", !!entity$osm_id)),
+      #name %LIKE% !!entity$name,
+      !is.na(boundary)
+    ) |>
+    head() |>
+    select(geom)
+}
+
 
 #' @rdname postgis
 #' @export

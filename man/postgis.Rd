@@ -2,13 +2,13 @@
 % Please edit documentation in R/postgis.R
 \name{postgis}
 \alias{postgis}
-\alias{pg_geom}
+\alias{filter_spatial}
 \alias{pg_bbox}
 \alias{\%&&\%}
 \alias{\%<->\%}
 \title{PostGIS utilities}
 \usage{
-pg_geom(x)
+filter_spatial(.data, geom, .predicate = "intersects")
 
 pg_bbox(x)
 

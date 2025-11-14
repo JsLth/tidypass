@@ -32,12 +32,11 @@ pak::pak("jslth/tidypass")
 
 ## Example
 
-This is a basic example which extracts all fast food restaurants in Karlsruhe along with their stated cuisine. Generally, only the four columns can be accessed directly (`tags`, `osm_id`, `osm_type`, and `geom`) and all other features have to be extracted from the tags list using the `%->>%` operator.
+This is a basic example which extracts all fast food restaurants in Karlsruhe along with their stated cuisine. As you can see, this is mostly written using dplyr. Spatial filters are a bit more complicated but also mostly follow dplyr syntax.
 
-```{r example}
+```{r build, warning=FALSE, message=FALSE}
 library(tidypass)
-library(dplyr, warn.conflicts = FALSE)
-library(sf, quietly = TRUE)
+library(sf)
 
 # Boundaries of Karlsruhe
 bbox <- st_as_sfc(st_bbox(c(
@@ -47,9 +46,35 @@ bbox <- st_as_sfc(st_bbox(c(
   ymax = 49.03
 )))
 
-pp_tbl("point") |>
-    filter(tags %->>% 'amenity' == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
-    transmute(cuisine = tags %->>% "cuisine", name = tags %->>% 'name', geom) |>
-    collect()
+query <- pp_tbl("point") |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(cuisine, name, geom)
+```
+
+Since Postpass works with SQL, the query is translated to Postgres SQL through `dbplyr`.
+
+```{r query}
+query
+```
+
+Postpass employs a queue system where you are assigned a different priority depending on the estimated size of your query. If the total amount of scanned data is too high, you are assigned a medium or slow queue, which can take a while. Fast food restaurants in Karlsruhe are very fast.
+
+```{r explain}
+explain(query)
+```
+
+Data can be extracted using the `collect` method. This sends the SQL query to the Postpass server.
+
+```{r collectl}
+fast_food <- collect(query)
+```
+
+```{r}
+plot(bbox)
+plot(st_geometry(fast_food), add = TRUE)
+```
+
+```{r include=FALSE}
+knitr::plot_crop("man/figures/README-unnamed-chunk-2-1.png")
 ```
 

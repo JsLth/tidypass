@@ -30,13 +30,13 @@ pak::pak("jslth/tidypass")
 ## Example
 
 This is a basic example which extracts all fast food restaurants in
-Karlsruhe along with their stated cuisine.
+Karlsruhe along with their stated cuisine. As you can see, this is
+mostly written using dplyr. Spatial filters are a bit more complicated
+but also mostly follow dplyr syntax.
 
 ``` r
 library(tidypass)
-library(dplyr, warn.conflicts = FALSE)
-library(sf, quietly = TRUE)
-#> Linking to GEOS 3.13.0, GDAL 3.10.1, PROJ 9.5.1; sf_use_s2() is TRUE
+library(sf)
 
 # Boundaries of Karlsruhe
 bbox <- st_as_sfc(st_bbox(c(
@@ -46,28 +46,48 @@ bbox <- st_as_sfc(st_bbox(c(
   ymax = 49.03
 )))
 
-pp_tbl("point") |>
-  filter(amenity == "fast_food" & way %&&% !!pg_bbox(bbox)) |>
-  mutate(cuisine = tags %->% "cuisine") |>
-  select(name, cuisine, way) |>
-  collect()
-#> Simple feature collection with 141 features and 2 fields
-#> Geometry type: POINT
-#> Dimension:     XY
-#> Bounding box:  xmin: 8.346221 ymin: 48.97115 xmax: 8.459447 ymax: 49.02864
-#> Geodetic CRS:  WGS 84
-#> # A tibble: 141 × 3
-#>    name                       cuisine                             geometry
-#>    <chr>                      <chr>                            <POINT [°]>
-#>  1 Habibi                     oriental;falafel;kebab   (8.411658 49.00911)
-#>  2 Shanghai Wok               asian                    (8.371491 49.01087)
-#>  3 Pizza Pazza                burger;currys;pasta;piz…  (8.392619 48.9857)
-#>  4 Kayas Döner                kebab                    (8.457469 48.99779)
-#>  5 anatolia Pizza & Kebaphaus kebab                    (8.366429 49.01724)
-#>  6 Monis Westbahnhof          german                    (8.36379 49.00237)
-#>  7 Bamboo Canteen             asian                    (8.400894 48.99431)
-#>  8 Abo's Pizza & Döner        kebab;pizza              (8.360729 48.98807)
-#>  9 33 Mersin Tantuni          <NA>                     (8.453179 48.99663)
-#> 10 Pizza King 60              <NA>                      (8.374086 48.9944)
-#> # ℹ 131 more rows
+query <- pp_tbl("point") |>
+  filter(amenity == "fast_food" & geom %&&% !!pg_bbox(bbox)) |>
+  select(cuisine, name, geom)
 ```
+
+Since Postpass works with SQL, the query is translated to Postgres SQL
+through `dbplyr`.
+
+``` r
+query
+#> <SQL>
+#> SELECT tags ->> 'cuisine' AS `cuisine`, tags ->> 'name' AS `name`, `geom`
+#> FROM (
+#>   SELECT `postpass_point`.*, tags ->> 'amenity' AS `amenity`
+#>   FROM `postpass_point`
+#> ) AS `q01`
+#> WHERE (`amenity` = 'fast_food' AND `geom` && st_setsrid(st_makebox2d(st_makepoint(8.34, 48.97), st_makepoint(8.46, 49.03)), 4326))
+```
+
+Postpass employs a queue system where you are assigned a different
+priority depending on the estimated size of your query. If the total
+amount of scanned data is too high, you are assigned a medium or slow
+queue, which can take a while. Fast food restaurants in Karlsruhe are
+very fast.
+
+``` r
+explain(query)
+#> Data scanned: 1.48 megabytes
+#> Result size:  96 bytes
+#> Queue:        fast queue
+```
+
+Data can be extracted using the `collect` method. This sends the SQL
+query to the Postpass server.
+
+``` r
+fast_food <- collect(query)
+```
+
+``` r
+plot(bbox)
+plot(st_geometry(fast_food), add = TRUE)
+```
+
+<img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />

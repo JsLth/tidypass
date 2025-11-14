@@ -66,3 +66,13 @@ num_to_letter <- function(num) {
 nice <- function(x) {
   sub("\\.?0+$", "", sprintf("%.2f", x))
 }
+
+
+to_title <- function(x) {
+  gsub("\\b([[:alpha:]])([[:alpha:]]+)", "\\U\\1\\L\\2", x, perl = TRUE)
+}
+
+
+is_string <- function(x) {
+  length(x) == 1 && is.character(x) && !is.na(x)
+}

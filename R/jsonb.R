@@ -86,10 +86,10 @@ unwrap <- function(query, ...) {
   quosures <- rlang::quos(..., .ignore_empty = "all")
   keys <- NULL
   n_quos <- length(quosures)
-  tags_name <- lazy_tbl_get_default_name(query, "tags")
+  tags_name <- as.name(lazy_tbl_get_default_name(query, "tags"))
   sql <- lapply(seq_len(n_quos), function(i) {
     keys <- rlang::expr_deparse(quosures[[i]][[2]])
-    extr <- (!!as.name(tags_name)) %->>% !!keys
+    extr <- (!!tags_name) %->>% !!keys
     names(extr) <- keys
     extr
   })
@@ -136,11 +136,21 @@ string_to_varchar <- function(x) {
 
 
 lazy_tbl_get_default_name <- function(tbl, var) {
-  vars <- tbl$lazy_query$vars
+  vars <- tbl$lazy_query$vars %||%
+    colnames(tbl)
 
   if (!is.character(vars)) {
-    vars[vars$var == var, ]$name[1]
+    default <- vars[vars$var == var, ]$name[1]
   } else {
-    vars[vars == var][1]
+    default <- vars[vars == var][1]
   }
+
+  if (is.na(default)) {
+    cli::cli_abort(c(
+      "Variable name {.var {var}} not found.",
+      "i" = "Have you unselected it?"
+    ))
+  }
+
+  default
 }
